@@ -41,12 +41,11 @@ async def test_risk_engine_high_risk(risk_engine_instance):
 
 @pytest.mark.asyncio
 async def test_risk_engine_score_bounds(risk_engine_instance):
-    # Test score does not exceed 100
     data = {"amount": 1000000, "location": "remote", "customer_age_days": 1}
     result = await risk_engine_instance.compute_risk_score(data)
     assert result.score <= 100
 
-    # Test score does not go below 0 (though our rules only add positive scores)
     data = {"amount": -100, "location": "local", "customer_age_days": 1000}
     result = await risk_engine_instance.compute_risk_score(data)
     assert result.score >= 0
+

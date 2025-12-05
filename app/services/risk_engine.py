@@ -1,46 +1,50 @@
 import yaml
 from typing import Dict, Any, List
-from app.core.models import RiskEngineOutput
+from app.schema.output_schema import CashflowMetrics, LiquidityMetrics, FinancialDisciplineMetrics, DebtServicingMetrics, RiskIndicators, RiskEngineOutput
 from pathlib import Path
 
 class RiskEngine:
-    """
-    Symbolic + ML hybrid Risk Engine responsible for scoring, binning, and decision logic.
-    Loads symbolic rules from a YAML file and applies them to compute a risk score.
-    """
     def __init__(self):
         self.rules = self._load_rules()
 
     def _load_rules(self) -> List[Dict[str, Any]]:
-        """Loads symbolic rules from the rules.yaml file."""
         rules_path = Path(__file__).parent.parent / "rules" / "rules.yaml"
         with open(rules_path, "r") as f:
             config = yaml.safe_load(f)
         return config.get("rules", [])
 
-    async def compute_risk_score(self, data: Dict[str, Any]) -> RiskEngineOutput:
-        """Computes a risk score (0-100), assigns a bin, and provides a decision and rationale."""
+    async def compute_risk_score(self, 
+                                 cashflow_metrics: CashflowMetrics,
+                                 liquidity_metrics: LiquidityMetrics,
+                                 financial_discipline_metrics: FinancialDisciplineMetrics,
+                                 debt_servicing_metrics: DebtServicingMetrics,
+                                 risk_indicators: RiskIndicators) -> RiskEngineOutput:
         score = 0
         rationale = []
 
-        # Apply symbolic rules
-        for rule in self.rules:
-            condition_str = rule.get("condition")
-            try:
-                # Evaluate the condition dynamically. This is a simplified example;
-                # in a real system, you'd use a more robust rule engine.
-                if eval(condition_str, {"data": data, **data}):  # Provide 'data' and its contents to eval scope
-                    score += rule.get("score_impact", 0)
-                    rationale.append(rule.get("rationale", ""))
-            except Exception as e:
-                # Log error if rule evaluation fails
-                print(f"Error evaluating rule '{rule.get("name")}'": {e})
-                continue
+        if cashflow_metrics.net_cashflow < 0:
+            score += 20
+            rationale.append("Negative net cashflow indicates financial distress.")
 
-        # Ensure score is within 0-100 range
+        if liquidity_metrics.current_ratio < 1.0:
+            score += 15
+            rationale.append("Current ratio below 1.0 suggests poor short-term liquidity.")
+
+        if financial_discipline_metrics.overdraft_frequency > 0:
+            score += financial_discipline_metrics.overdraft_frequency * 5
+            rationale.append(f"Frequent overdrafts ({financial_discipline_metrics.overdraft_frequency}) indicate poor financial management.")
+        
+        if debt_servicing_metrics.dscr < 1.2:
+            score += 25
+            rationale.append(f"Debt Service Coverage Ratio ({debt_servicing_metrics.dscr:.2f}) is below acceptable levels.")
+
+        if risk_indicators.bankruptcy_flags:
+            score += 50
+            rationale.append("Bankruptcy flags detected, indicating severe financial risk.")
+
+
         score = max(0, min(100, score))
 
-        # Assign bins
         if score < 30:
             bin_category = "low"
             decision = "Approved"
@@ -60,3 +64,4 @@ class RiskEngine:
             decision=decision,
             rationale=rationale
         )
+
