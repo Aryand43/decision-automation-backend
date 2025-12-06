@@ -61,3 +61,5 @@ async def test_risk_score():
     assert "risk_score" in response_json
     assert response_json["risk_score"]["score"] >= 0
 
+
+

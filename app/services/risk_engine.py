@@ -22,26 +22,33 @@ class RiskEngine:
         score = 0
         rationale = []
 
-        if cashflow_metrics.net_cashflow < 0:
+        # Safely access metrics, defaulting to 0 if None to prevent errors
+        net_cashflow = getattr(cashflow_metrics, 'net_cashflow', 0.0) or 0.0
+        current_ratio = getattr(liquidity_metrics, 'current_ratio', 0.0) or 0.0
+        overdraft_frequency = getattr(financial_discipline_metrics, 'overdraft_frequency', 0) or 0
+        dscr = getattr(debt_servicing_metrics, 'dscr', 0.0) or 0.0
+        bankruptcy_flags = getattr(risk_indicators, 'bankruptcy_flags', False) or False
+
+        if net_cashflow < 0:
             score += 20
             rationale.append("Negative net cashflow indicates financial distress.")
 
-        if liquidity_metrics.current_ratio < 1.0:
+        if current_ratio < 1.0:
             score += 15
             rationale.append("Current ratio below 1.0 suggests poor short-term liquidity.")
 
-        if financial_discipline_metrics.overdraft_frequency > 0:
-            score += financial_discipline_metrics.overdraft_frequency * 5
-            rationale.append(f"Frequent overdrafts ({financial_discipline_metrics.overdraft_frequency}) indicate poor financial management.")
+        if overdraft_frequency > 0:
+            score += overdraft_frequency * 5
+            rationale.append(f"Frequent overdrafts ({overdraft_frequency}) indicate poor financial management.")
         
-        if debt_servicing_metrics.dscr < 1.2:
+        # Only apply DSCR rule if dscr is not zero (to avoid penalizing for missing data that defaults to 0)
+        if dscr > 0 and dscr < 1.2: 
             score += 25
-            rationale.append(f"Debt Service Coverage Ratio ({debt_servicing_metrics.dscr:.2f}) is below acceptable levels.")
+            rationale.append(f"Debt Service Coverage Ratio ({dscr:.2f}) is below acceptable levels.")
 
-        if risk_indicators.bankruptcy_flags:
+        if bankruptcy_flags:
             score += 50
             rationale.append("Bankruptcy flags detected, indicating severe financial risk.")
-
 
         score = max(0, min(100, score))
 

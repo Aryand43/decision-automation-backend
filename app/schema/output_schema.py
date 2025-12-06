@@ -3,34 +3,34 @@ from typing import Dict, Any, List, Optional
 from datetime import date
 
 class CashflowMetrics(BaseModel):
-    total_inflow: float
-    total_outflow: float
-    net_cashflow: float
-    average_monthly_cashflow: float
-    cashflow_volatility: float
+    total_inflow: Optional[float] = None
+    total_outflow: Optional[float] = None
+    net_cashflow: Optional[float] = None
+    average_monthly_cashflow: Optional[float] = None
+    cashflow_volatility: Optional[float] = None
 
 class LiquidityMetrics(BaseModel):
-    current_ratio: float
-    quick_ratio: float
+    current_ratio: Optional[float] = None
+    quick_ratio: Optional[float] = None
     cash_conversion_cycle: Optional[float] = None
-    days_cash_on_hand: float
+    days_cash_on_hand: Optional[float] = None
 
 class FinancialDisciplineMetrics(BaseModel):
-    overdraft_frequency: int
-    late_payment_count: int
-    bounced_cheque_count: int
-    savings_rate: float
+    overdraft_frequency: Optional[int] = None # Assuming this could be None if no data
+    late_payment_count: Optional[int] = None # Assuming this could be None if no data
+    bounced_cheque_count: Optional[int] = None # Assuming this could be None if no data
+    savings_rate: Optional[float] = None
 
 class DebtServicingMetrics(BaseModel):
-    dscr: float
-    debt_to_income_ratio: float
-    loan_payment_to_income_ratio: float
+    dscr: Optional[float] = None
+    debt_to_income_ratio: Optional[float] = None
+    loan_payment_to_income_ratio: Optional[float] = None
 
 class RiskIndicators(BaseModel):
-    high_risk_transactions: List[Dict[str, Any]]
-    credit_score_change: float
-    negative_news_mentions: int
-    bankruptcy_flags: bool
+    high_risk_transactions: List[Dict[str, Any]] = Field(default_factory=list)
+    credit_score_change: Optional[float] = None
+    negative_news_mentions: Optional[int] = None # Assuming this could be None
+    bankruptcy_flags: Optional[bool] = None # Assuming this could be None
 
 class LlmSummaryOutput(BaseModel):
     summary_text: str
@@ -38,8 +38,8 @@ class LlmSummaryOutput(BaseModel):
     red_flags_identified: List[str]
 
 class ForecastOutputs(BaseModel):
-    short_term_cashflow_forecast: Dict[date, float]
-    long_term_revenue_projection: Dict[date, float]
+    short_term_cashflow_forecast: Dict[date, Optional[float]]
+    long_term_revenue_projection: Dict[date, Optional[float]]
     liquidity_stress_test_results: Dict[str, Any]
 
 class UnifiedDocumentResponse(BaseModel):

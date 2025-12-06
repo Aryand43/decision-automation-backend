@@ -1,10 +1,22 @@
 from fastapi import FastAPI
 from app.api.router import api_router
+from pydantic import BaseModel
+import numpy as np # Import numpy
+
+# Custom JSON serializer for numpy.nan
+def convert_nan_to_none(obj):
+    if isinstance(obj, float) and np.isnan(obj):
+        return None
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 app = FastAPI(
     title="Document Intelligence Backend",
     description="Glue layer for document processing and risk assessment",
     version="0.1.0",
+    json_encoders={
+        np.float64: convert_nan_to_none, # Handle numpy float NaN
+        float: convert_nan_to_none       # Handle standard float NaN
+    }
 )
 
 app.include_router(api_router)

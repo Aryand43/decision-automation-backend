@@ -12,3 +12,5 @@ rules:
     score_impact: 15
     rationale: "Transaction from a newly registered customer."
 
+
+

@@ -4,6 +4,8 @@ from app.schema.kyb_kyc_schema import KybKycInput
 from app.schema.output_schema import UnifiedDocumentResponse, CashflowMetrics, LiquidityMetrics, FinancialDisciplineMetrics, DebtServicingMetrics, RiskIndicators, LlmSummaryOutput, ForecastOutputs, RiskEngineOutput
 from app.core.models import DocumentAnalysisRequest, CvOutput, RagOutput, AnomalyOutput
 
+import pandas as pd
+
 from app.services.cv_service import CvService
 from app.services.rag_service import RagService
 from app.services.anomaly_service import AnomalyService
@@ -29,6 +31,8 @@ class IngestionService:
         document_id = request.document.document_id
         raw_content = request.document.content
 
+        # Prepare content for classification and standardization
+        # Assuming raw_content can be a dict with 'excel_data' (list of dicts) or 'text_content' (str)
         document_type = self.document_classifier.classify_document(raw_content)
 
         if document_type == "bank_statement":
@@ -45,7 +49,8 @@ class IngestionService:
             )
 
     async def _process_bank_statement(self, document_id: str, raw_content: dict) -> UnifiedDocumentResponse:
-        bank_statement_input = self.standardization_service.standardize_bank_statement(raw_content)
+        df = pd.DataFrame(raw_content["excel_data"]) if "excel_data" in raw_content else pd.DataFrame()
+        bank_statement_input = self.standardization_service.standardize_bank_statement(df)
 
         cashflow_metrics = self.metrics_service.calculate_cashflow_metrics(bank_statement_input)
         liquidity_metrics = self.metrics_service.calculate_liquidity_metrics(bank_statement_input)
@@ -53,16 +58,24 @@ class IngestionService:
         debt_servicing_metrics = self.metrics_service.calculate_debt_servicing_metrics(bank_statement_input)
         risk_indicators = self.metrics_service.identify_risk_indicators(bank_statement_input)
 
-        cv_output = await self.cv_service.analyze_document(raw_content)
-        rag_output = await self.rag_service.process_document(raw_content)
-        anomaly_output = await self.anomaly_service.detect_anomaly(raw_content)
+        # cv_output = await self.cv_service.analyze_document(raw_content)
+        # rag_output = await self.rag_service.process_document(raw_content)
+        # anomaly_output = await self.anomaly_service.detect_anomaly(raw_content)
         
-        time_series_data = {t.date: t.amount if t.type == 'credit' else -t.amount for t in bank_statement_input.transactions}
+        # Ensure time_series_data values are float or None
+        time_series_data = {
+            t.date: (float(t.amount) if pd.notna(t.amount) else None) if t.type == 'credit'
+                      else (float(-t.amount) if pd.notna(t.amount) else None)
+            for t in bank_statement_input.transactions
+        }
         forecast_outputs = await self.forecast_service.get_forecast(time_series_data)
 
         risk_engine_output = await self.risk_engine.compute_risk_score(
             cashflow_metrics, liquidity_metrics, financial_discipline_metrics, debt_servicing_metrics, risk_indicators
         )
+
+        # Explicitly ensure risk_score is float or None before passing to UnifiedDocumentResponse
+        final_risk_score = float(risk_engine_output.score) if pd.notna(risk_engine_output.score) else None
 
         llm_summary = LlmSummaryOutput(
             summary_text="Bank statement analysis complete.",
@@ -80,7 +93,7 @@ class IngestionService:
             risk_indicators=risk_indicators,
             llm_summary=llm_summary,
             forecasts=forecast_outputs,
-            risk_score=risk_engine_output.score,
+            risk_score=final_risk_score, # Use the strictly converted value
             risk_factors=risk_engine_output.rationale
         )
 

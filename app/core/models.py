@@ -23,6 +23,6 @@ class RagOutput(BaseModel):
 
 class AnomalyOutput(BaseModel):
     is_anomaly: bool
-    anomaly_score: float
+    anomaly_score: Optional[float] = None
     reason: Optional[str] = None
 
